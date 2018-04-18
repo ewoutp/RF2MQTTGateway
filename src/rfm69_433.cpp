@@ -5,6 +5,8 @@ RFM69 433Mhz transceiver code.
 #include <RFM69OOK.h>
 #include <SPI.h>
 #include <RFM69OOKregisters.h>
+#include <ArduinoJson.h>
+
 #include "decoders.h"
 #include "simple_fifo.h"
 #include "secrets.h"
@@ -59,28 +61,29 @@ static void signal433ChangedInt() {
   fifo_433.enqueue(w);
 }
 
-// Outgoing data buffer for RF12
-//byte packetBuffer [MAXDATA], packetFill;
 
 static void processDecodedData(DecoderInfo& di) {
+  static StaticJsonBuffer<512> jsonBuffer;
+
   // Fetch data
   byte size;
   const byte* data = di.decoder->getData(size);
 
   // Prepare MQTT message payload
-  String s("{\"protocol\":\"");
-  s += di.name;
-  s += "\",\"data\":[";
+  jsonBuffer.clear();
+  JsonObject &root = jsonBuffer.createObject();
+
+  // Set the values
+  root["protocol"] = di.name;
+  JsonArray& dataArr = root.createNestedArray("data");
   for (int i = 0; i < size; i++) {
-    if (i > 0) {
-      s.concat(',');
-    }
-    s.concat(data[i]);
+    dataArr.add(data[i]);
   }
-  s += "]}";
 
   // Send MQTT message
-  publishMqttMessage(MQTT_TOPIC, 2, true, s.c_str());
+  String payload;
+  root.printTo(payload);
+  publishMqttMessage(MQTT_TOPIC, 2, true, payload.c_str());
 
   // Reset decoder
   di.decoder->resetDecoder();
