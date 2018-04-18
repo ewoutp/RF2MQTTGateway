@@ -10,19 +10,29 @@ public:
 /// This is the general base class for implementing OOK encoders.
 class EncodeOOK {
 public:
-  virtual void encode(const byte *msg, int msgLen, OOKTransmitter& tx) = 0;
+  // Encode the given message to the given transmitter.
+  // Returns true on success, false otherwise.
+  virtual bool encode(const byte *msg, int msgLen, OOKTransmitter& tx) = 0;
 };
 
-// 433 MHz decoders
+// 433 MHz encoders
 
 /// OOK encoder for Klik-Aan-Klik-Uit type A devices.
 class KakuAEncoder : public EncodeOOK {
 public:
-  virtual void encode(const byte *msg, int msgLen, OOKTransmitter& tx) {
-    startPulse(tx);
+  virtual bool encode(const byte *msg, int msgLen, OOKTransmitter& tx) {
     const byte* p = msg;
     int bit = 0x01;
-    for (int i = 0; i < 32; i++) {
+    int bitCount = 32;
+    if (msgLen == 4) {
+        bitCount = 32;
+    } else if (msgLen = 5) {
+        bitCount = 36;
+    } else {
+        return false;
+    }
+    startPulse(tx);
+    for (int i = 0; i < bitCount; i++) {
       if ((*p & bit) == bit) {
           bit1(tx);
       } else {
@@ -36,6 +46,7 @@ public:
       }
     }
     stopPulse(tx);
+    return true;
   }
 
 private:
@@ -77,3 +88,9 @@ private:
       delayMicroseconds(T*40);
   }
 };
+
+typedef struct {
+    int typecode;
+    const char* name;
+    EncodeOOK* encoder;
+} EncoderInfo;

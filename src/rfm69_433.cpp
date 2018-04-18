@@ -51,6 +51,22 @@ DecoderInfo di_433[] = {
     { -1, 0, 0 }
 };
 
+KakuAEncoder kakuAEncoder;
+
+EncoderInfo ei_433[] = {
+    //{ 5, "ORSC", &orsc },
+    //{ 6, "CRES", &cres },
+    //{ 7, "KAKU", &kaku },
+    //{ 8, "XRF", &xrf },
+    //{ 9, "HEZ", &hez },
+    //{ 10, "ELRO", &elro },
+    //{ 11, "FMGO", &fmgo },
+    //{ 12, "SMK", &smk },
+    //{ 13, "BYR", &byr },
+    { 14, "KAKUA", &kakuAEncoder},
+    { -1, 0, 0 }
+};
+
 typedef SimpleFIFO<word, 8> pulseFIFO;
 pulseFIFO fifo_433;
 word last_433; // never accessed outside ISR's
@@ -171,18 +187,22 @@ public:
 };
 
 static rfm69OOKTransmitter transmitter;
-static KakuAEncoder kakuAEncoder;
 
 void sendMessage(const String& protocol, const byte* msg, int msgLen) {
-  radio433.receiveEnd();
-  radio433.transmitBegin();
+  EncoderInfo* pei = ei_433;
+  while (pei->encoder) {
+    if (protocol == pei->name) {
+      radio433.receiveEnd();
+      radio433.transmitBegin();
 
-  if (protocol == "KAKUA") {
-    Serial.println("Sending KAKUA message");
-    Serial.print("len: "); Serial.println(msgLen);
-    kakuAEncoder.encode(msg, msgLen, transmitter);
+      Serial.print("Sending "); Serial.print(pei->name); Serial.println(" message");
+      Serial.print("len: "); Serial.println(msgLen);
+      pei->encoder->encode(msg, msgLen, transmitter);
+
+      radio433.transmitEnd();
+      radio433.receiveBegin();
+      break;
+    }
+    pei++;
   }
-
-  radio433.transmitEnd();
-  radio433.receiveBegin();
 }
