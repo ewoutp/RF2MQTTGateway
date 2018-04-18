@@ -12,3 +12,5 @@ void connectToMqtt();
 void setupMqtt();
 
 void stopMqttReconnect();
+
+void publishMqttMessage(const char *topic, uint8_t qos, bool retain, const char *payload);

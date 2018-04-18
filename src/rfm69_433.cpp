@@ -7,6 +7,8 @@ RFM69 433Mhz transceiver code.
 #include <RFM69OOKregisters.h>
 #include "decoders.h"
 #include "simple_fifo.h"
+#include "secrets.h"
+#include "mqtt.h"
 
 #define DEBUG
 #define MAXDATA 66
@@ -58,42 +60,30 @@ static void signal433ChangedInt() {
 }
 
 // Outgoing data buffer for RF12
-byte packetBuffer [MAXDATA], packetFill;
+//byte packetBuffer [MAXDATA], packetFill;
 
-// Append a new data item to the outgoing packet buffer (if there is room
-static void addToBuffer (byte code, const char* name, const byte* buf, byte len) {
-#ifdef DEBUG
-    Serial.print(name);
-    for (byte i = 0; i < len; ++i) {
-        Serial.print(' ');
-        Serial.print((int) buf[i], HEX);
+static void processDecodedData(DecoderInfo& di) {
+  // Fetch data
+  byte size;
+  const byte* data = di.decoder->getData(size);
+
+  // Prepare MQTT message payload
+  String s("{\"protocol\":\"");
+  s += di.name;
+  s += "\",\"data\":[";
+  for (int i = 0; i < size; i++) {
+    if (i > 0) {
+      s.concat(',');
     }
-    // Serial.print(' ');
-    // Serial.print(millis() / 1000);
-    Serial.println();
-#endif
+    s.concat(data[i]);
+  }
+  s += "]}";
 
-    if (packetFill + len < sizeof packetBuffer) {
-        packetBuffer[packetFill++] = code + (len << 4);
-        memcpy(packetBuffer + packetFill, buf, len);
-        packetFill += len;
-    } else {
-#ifdef DEBUG
-/*
-        Serial.print(" dropped: ");
-        Serial.print(name);
-        Serial.print(", ");
-        Serial.print((int) len);
-        Serial.println(" bytes");*/
-#endif        
-    }
-}
+  // Send MQTT message
+  publishMqttMessage(MQTT_TOPIC, 2, true, s.c_str());
 
-static void addDecodedData (DecoderInfo& di) {
-    byte size;
-    const byte* data = di.decoder->getData(size);
-    addToBuffer(di.typecode, di.name, data, size);
-    di.decoder->resetDecoder();
+  // Reset decoder
+  di.decoder->resetDecoder();
 }
 
 // Check for a new pulse and run the corresponding decoders for it
@@ -114,7 +104,7 @@ static void runPulseDecoders (DecoderInfo* pdi, pulseFIFO& fifo) {
 #endif
         while (pdi->decoder != 0) {
             if (pdi->decoder->nextPulse(p)) {
-              addDecodedData(*pdi);
+              processDecodedData(*pdi);
             }
             ++pdi;
         }
