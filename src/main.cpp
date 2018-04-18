@@ -3,6 +3,7 @@ This example uses FreeRTOS softwaretimers as there is no built-in Ticker library
 */
 
 #include "mqtt.h"
+#include "rfm69_433.h"
 #include "wifi_conn_mgmt.h"
 
 void setup() {
@@ -10,6 +11,8 @@ void setup() {
   Serial.println();
   Serial.println();
   Serial.println("Beginning ...");
+
+  setupRFM69();
 
   setupWifi();
   Serial.println("setupWifi completed.");
@@ -21,4 +24,5 @@ void setup() {
 }
 
 void loop() {
+  loopRFM69();
 }
