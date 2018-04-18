@@ -5,8 +5,8 @@ extern "C" {
 	#include "freertos/FreeRTOS.h"
 	#include "freertos/timers.h"
 }
-#include <ESP8266WebServer.h>
-#include <WiFiManager.h>
+//#include <ESP8266WebServer.h>
+//#include <WiFiManager.h>
 
 // connectToWifi begins connecting to WIFI.
 void connectToWifi();

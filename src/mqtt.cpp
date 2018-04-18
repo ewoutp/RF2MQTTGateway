@@ -3,9 +3,7 @@ This example uses FreeRTOS softwaretimers as there is no built-in Ticker library
 */
 
 #include "mqtt.h"
-
-#define MQTT_HOST IPAddress(192, 168, 1, 10)
-#define MQTT_PORT 1883
+#include "secrets.h"
 
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
