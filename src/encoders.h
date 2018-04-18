@@ -31,21 +31,26 @@ public:
     } else {
         return false;
     }
-    startPulse(tx);
-    for (int i = 0; i < bitCount; i++) {
-      if ((*p & bit) == bit) {
-          bit1(tx);
-      } else {
-          bit0(tx);
-      }
-      if (bit == 0x80) {
-          bit = 0x01;
-          p++;
-      } else {
-          bit <<= 1;
-      }
-    }
-    stopPulse(tx);
+    // Wait a bit
+    tx.off();
+    delayMicroseconds(T*5);
+    //for (int repeat = 0; repeat < 2; repeat++) {
+        startPulse(tx);
+        for (int i = 0; i < bitCount; i++) {
+        if ((*p & bit) == bit) {
+            bit1(tx);
+        } else {
+            bit0(tx);
+        }
+        if (bit == 0x80) {
+            bit = 0x01;
+            p++;
+        } else {
+            bit <<= 1;
+        }
+        }
+        stopPulse(tx);
+    //}
     return true;
   }
 
@@ -53,6 +58,7 @@ private:
   const int T = 275;
 
   void startPulse(OOKTransmitter& tx) {
+      // Now begin the real start pulse
       tx.on();
       delayMicroseconds(T);
       tx.off();

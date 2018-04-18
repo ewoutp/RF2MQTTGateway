@@ -13,7 +13,7 @@ RFM69 433Mhz transceiver code.
 #include "secrets.h"
 #include "mqtt.h"
 
-#define DEBUG
+//#define DEBUG
 #define MAXDATA 66
 
 #define RF69_FREQ     433.9
@@ -79,7 +79,7 @@ static void signal433ChangedInt() {
 }
 
 
-static void processDecodedData(DecoderInfo& di) {
+static void processDecodedData(DecoderInfo& di, const char *id) {
   static StaticJsonBuffer<512> jsonBuffer;
 
   // Fetch data
@@ -91,7 +91,9 @@ static void processDecodedData(DecoderInfo& di) {
   JsonObject &root = jsonBuffer.createObject();
 
   // Set the values
+  root["type"] = "receive";
   root["protocol"] = di.name;
+  root["sender"] = id;
   JsonArray& dataArr = root.createNestedArray("data");
   for (int i = 0; i < size; i++) {
     dataArr.add(data[i]);
@@ -107,7 +109,7 @@ static void processDecodedData(DecoderInfo& di) {
 }
 
 // Check for a new pulse and run the corresponding decoders for it
-static void runPulseDecoders (DecoderInfo* pdi, pulseFIFO& fifo) {
+static void runPulseDecoders (DecoderInfo* pdi, pulseFIFO& fifo, const char *id) {
     // get next pulse with and reset it - need to protect against interrupts
     cli();
     word p = 0;
@@ -124,7 +126,7 @@ static void runPulseDecoders (DecoderInfo* pdi, pulseFIFO& fifo) {
 #endif
         while (pdi->decoder != 0) {
             if (pdi->decoder->nextPulse(p)) {
-              processDecodedData(*pdi);
+              processDecodedData(*pdi, id);
             }
             ++pdi;
         }
@@ -149,7 +151,9 @@ void setupRFM69() {
   digitalWrite(RFM69_RST, LOW);
   delay(10);
 
+#ifdef DEBUG
   Serial.println("Initializing radio 433");
+#endif
   
   pinMode(RFM69_DIO2, INPUT);
 
@@ -165,14 +169,15 @@ void setupRFM69() {
   radio433.attachUserInterrupt(signal433ChangedInt);
   radio433.receiveBegin();
 
+#ifdef DEBUG
   Serial.println(F("start 433"));
   radio433.readAllRegs();
-
   Serial.println("Setup complete");
+#endif
 }
 
-void loopRFM69() {
-   runPulseDecoders(di_433, fifo_433); 
+void loopRFM69(const char *id) {
+   runPulseDecoders(di_433, fifo_433, id); 
 }
 
 class rfm69OOKTransmitter : public OOKTransmitter {

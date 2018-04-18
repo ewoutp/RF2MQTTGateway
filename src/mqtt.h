@@ -8,6 +8,7 @@ extern "C" {
 #include <AsyncMqttClient.h>
 
 void connectToMqtt();
+bool isMqttConnected();
 
 void setupMqtt();
 

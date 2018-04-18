@@ -16,6 +16,10 @@ void connectToMqtt() {
   mqttClient.connect();
 }
 
+bool isMqttConnected() {
+  return mqttClient.connected();
+}
+
 static void onMqttConnect(bool sessionPresent) {
   Serial.println("Connected to MQTT.");
   Serial.print("Session present: ");
@@ -64,6 +68,7 @@ static void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProp
     for (int i = 0; i < data.size(); i++) {
       dataBuf[i] = data.get<byte>(i);
     }
+    sendMessage(protocol, dataBuf, data.size());
     sendMessage(protocol, dataBuf, data.size());
   }
 }
