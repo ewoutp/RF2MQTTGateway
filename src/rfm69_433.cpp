@@ -8,6 +8,7 @@ RFM69 433Mhz transceiver code.
 #include <ArduinoJson.h>
 
 #include "decoders.h"
+#include "encoders.h"
 #include "simple_fifo.h"
 #include "secrets.h"
 #include "mqtt.h"
@@ -83,7 +84,7 @@ static void processDecodedData(DecoderInfo& di) {
   // Send MQTT message
   String payload;
   root.printTo(payload);
-  publishMqttMessage(MQTT_TOPIC, 2, true, payload.c_str());
+  publishMqttMessage(MQTT_RECEIVE_TOPIC, 2, true, payload.c_str());
 
   // Reset decoder
   di.decoder->resetDecoder();
@@ -156,4 +157,32 @@ void setupRFM69() {
 
 void loopRFM69() {
    runPulseDecoders(di_433, fifo_433); 
+}
+
+class rfm69OOKTransmitter : public OOKTransmitter {
+public:
+  virtual void on() {
+    radio433.send(true);
+  }
+
+  virtual void off() {
+    radio433.send(false);
+  }
+};
+
+static rfm69OOKTransmitter transmitter;
+static KakuAEncoder kakuAEncoder;
+
+void sendMessage(const String& protocol, const byte* msg, int msgLen) {
+  radio433.receiveEnd();
+  radio433.transmitBegin();
+
+  if (protocol == "KAKUA") {
+    Serial.println("Sending KAKUA message");
+    Serial.print("len: "); Serial.println(msgLen);
+    kakuAEncoder.encode(msg, msgLen, transmitter);
+  }
+
+  radio433.transmitEnd();
+  radio433.receiveBegin();
 }
