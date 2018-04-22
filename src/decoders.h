@@ -340,7 +340,7 @@ class KakuADecoder : public DecodeOOK {
             clearBackBuffer();            
             if( pos >= 4 ) //we expect 4 bytes
             {
-              //reverseBits();
+              reverseBits();
               return 1;
             }
           }

@@ -34,7 +34,6 @@
 
 volatile byte RFM69OOK::_mode;  // current transceiver state
 volatile int RFM69OOK::RSSI; 	// most accurate RSSI during reception (closest to the reception)
-RFM69OOK* RFM69OOK::selfPointer;
 
 bool RFM69OOK::initialize()
 {
@@ -62,12 +61,11 @@ bool RFM69OOK::initialize()
   setMode(RF69OOK_MODE_STANDBY);
     while ((readReg(REG_IRQFLAGS1) & RF_IRQFLAGS1_MODEREADY) == 0x00); // Wait for ModeReady
 
-  selfPointer = this;
   return true;
 }
 
 // Poll for OOK signal
-bool RFM69OOK::poll()
+bool IRAM_ATTR RFM69OOK::poll()
 {
   return digitalRead(_interruptPin);
 }
@@ -97,7 +95,9 @@ void RFM69OOK::transmitEnd()
 void RFM69OOK::receiveBegin()
 {
   pinMode(_interruptPin, INPUT);
-  attachInterrupt(_interruptNum, RFM69OOK::isr0, CHANGE); // generate interrupts in RX mode
+  if (_userInterrupt) {
+    attachInterrupt(_interruptNum, _userInterrupt, CHANGE); // generate interrupts in RX mode
+  }
   setMode(RF69OOK_MODE_RX);
 }
 
@@ -108,17 +108,11 @@ void RFM69OOK::receiveEnd()
   detachInterrupt(_interruptNum); // make sure there're no surprises
 }
 
-// Handle pin change interrupts in OOK mode
-void RFM69OOK::interruptHandler()
-{
-  if (userInterrupt != NULL) (*userInterrupt)();
-}
-
 // Set a user interrupt for all transfer methods in receive mode
 // call with NULL to disable the user interrupt handler
 void RFM69OOK::attachUserInterrupt(void (*function)())
 {
-  userInterrupt = function;
+  _userInterrupt = function;
 }
 
 // return the frequency (in Hz)
@@ -218,8 +212,6 @@ void RFM69OOK::setPowerLevel(byte powerLevel)
   _powerLevel = powerLevel;
   writeReg(REG_PALEVEL, (readReg(REG_PALEVEL) & 0xE0) | (_powerLevel > 31 ? 31 : _powerLevel));
 }
-
-void RFM69OOK::isr0() { selfPointer->interruptHandler(); }
 
 int8_t RFM69OOK::readRSSI(bool forceTrigger) {
   if (forceTrigger)

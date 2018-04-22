@@ -22,7 +22,7 @@ class KakuAEncoder : public EncodeOOK {
 public:
   virtual bool encode(const byte *msg, int msgLen, OOKTransmitter& tx) {
     const byte* p = msg;
-    int bit = 0x01;
+    int bit = 0x80;
     int bitCount = 32;
     if (msgLen == 4) {
         bitCount = 32;
@@ -42,11 +42,11 @@ public:
         } else {
             bit0(tx);
         }
-        if (bit == 0x80) {
-            bit = 0x01;
+        if (bit == 0x01) {
+            bit = 0x80;
             p++;
         } else {
-            bit <<= 1;
+            bit >>= 1;
         }
         }
         stopPulse(tx);

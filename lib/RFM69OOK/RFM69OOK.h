@@ -95,20 +95,16 @@ class RFM69OOK {
     bool poll();
     void send(bool signal);
     void attachUserInterrupt(void (*function)());
-	void setBandwidth(uint8_t bw);
+	  void setBandwidth(uint8_t bw);
     void setBitrate(uint32_t bitrate);
-	void setRSSIThreshold(int8_t rssi);
-	void setFixedThreshold(uint8_t threshold);
-	void setSensitivityBoost(uint8_t value);
+    void setRSSIThreshold(int8_t rssi);
+    void setFixedThreshold(uint8_t threshold);
+    void setSensitivityBoost(uint8_t value);
 
     void select();
     void unselect();
 
   protected:
-    static void isr0();
-    void virtual interruptHandler();
-
-    static RFM69OOK* selfPointer;
     byte _slaveSelectPin;
     byte _interruptPin;
     byte _interruptNum;
@@ -121,8 +117,7 @@ class RFM69OOK {
     void setHighPowerRegs(bool onOff);
 
     // functions related to OOK mode
-    void (*userInterrupt)();
-    void ookInterruptHandler();
+    void (*_userInterrupt)();
 };
 
 #endif

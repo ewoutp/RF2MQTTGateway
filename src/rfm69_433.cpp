@@ -67,15 +67,26 @@ EncoderInfo ei_433[] = {
     { -1, 0, 0 }
 };
 
-typedef SimpleFIFO<word, 8> pulseFIFO;
+static portMUX_TYPE signalMux = portMUX_INITIALIZER_UNLOCKED;
+typedef SimpleFIFO<word, 255> pulseFIFO;
 pulseFIFO fifo_433;
-word last_433; // never accessed outside ISR's
 
-static void signal433ChangedInt() {
-  word now = micros();
-  word w = now - last_433;
-  last_433 = now;
-  fifo_433.enqueue(w);
+static void IRAM_ATTR signal433ChangedInt() {
+  static volatile word last_433 = 0; // never accessed outside ISR's
+  static volatile bool s0 = false;
+
+//  bool s = radio433.poll();
+//  if (s != s0) {
+//    s0 = s;
+    word now = micros();
+    portENTER_CRITICAL_ISR(&signalMux);
+    word w = now - last_433;
+    if (w > 100) {
+      last_433 = now;
+      fifo_433.enqueue(w);
+    }
+    portEXIT_CRITICAL_ISR(&signalMux);
+//  }
 }
 
 
@@ -94,6 +105,7 @@ static void processDecodedData(DecoderInfo& di, const char *id) {
   root["type"] = "receive";
   root["protocol"] = di.name;
   root["sender"] = id;
+  root["uptime"] = millis() / 1000;
   JsonArray& dataArr = root.createNestedArray("data");
   for (int i = 0; i < size; i++) {
     dataArr.add(data[i]);
@@ -103,6 +115,7 @@ static void processDecodedData(DecoderInfo& di, const char *id) {
   String payload;
   root.printTo(payload);
   publishMqttMessage(MQTT_RECEIVE_TOPIC, 2, true, payload.c_str());
+  Serial.println(payload);
 
   // Reset decoder
   di.decoder->resetDecoder();
@@ -110,13 +123,13 @@ static void processDecodedData(DecoderInfo& di, const char *id) {
 
 // Check for a new pulse and run the corresponding decoders for it
 static void runPulseDecoders (DecoderInfo* pdi, pulseFIFO& fifo, const char *id) {
-    // get next pulse with and reset it - need to protect against interrupts
-    cli();
-    word p = 0;
-    if (fifo.count() > 0) {
-      p = fifo.dequeue();
-    }
-    sei();
+  // get next pulse with and reset it - need to protect against interrupts
+  word p = 0;
+  portENTER_CRITICAL_ISR(&signalMux);
+  if (fifo.count() > 0) {
+    p = fifo.dequeue();
+  }
+  portEXIT_CRITICAL_ISR(&signalMux);
 
     // if we had a pulse, go through each of the decoders
     if (p != 0) { 
@@ -159,9 +172,12 @@ void setupRFM69() {
 
   radio433.initialize();
 //  radio433.setBandwidth(OOK_BW_10_4);
-  radio433.setRSSIThreshold(-70);
-  radio433.setFixedThreshold(30);
-  //radio433.setSensitivityBoost(SENSITIVITY_BOOST_HIGH);
+//  radio433.setRSSIThreshold(-70);
+//  radio433.setFixedThreshold(30);
+
+  radio433.setRSSIThreshold(-50); // -50
+  radio433.setFixedThreshold(45); // 45
+  radio433.setSensitivityBoost(SENSITIVITY_BOOST_HIGH);
   radio433.setFrequencyMHz(433.9);
   //radio433.setFrequencyMHz(868.35);
   //radio433.setHighPower();
