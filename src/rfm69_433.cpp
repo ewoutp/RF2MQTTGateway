@@ -15,6 +15,7 @@ RFM69 433Mhz transceiver code.
 #include "mqtt.h"
 
 //#define DEBUG
+#define DEBUG_LED   13 // RED LED
 #define MAXDATA 66
 
 #define RF69_FREQ     433.9
@@ -76,25 +77,21 @@ ProtocolInfo pi[] = {
 };
 
 static portMUX_TYPE signalMux = portMUX_INITIALIZER_UNLOCKED;
-typedef SimpleFIFO<word, 255> pulseFIFO;
+typedef unsigned long microsUnit;
+typedef SimpleFIFO<microsUnit, 255> pulseFIFO;
 pulseFIFO fifo_433;
 
 static void IRAM_ATTR signal433ChangedInt() {
-  static volatile word last_433 = 0; // never accessed outside ISR's
-  static volatile bool s0 = false;
+  static volatile microsUnit last_433 = 0; // never accessed outside ISR's
 
-//  bool s = radio433.poll();
-//  if (s != s0) {
-//    s0 = s;
-    word now = micros();
+    microsUnit now = micros();
     portENTER_CRITICAL_ISR(&signalMux);
-    word w = now - last_433;
+    microsUnit w = now - last_433;
     if (w > 100) {
       last_433 = now;
       fifo_433.enqueue(w);
     }
     portEXIT_CRITICAL_ISR(&signalMux);
-//  }
 }
 
 static void processDecodedData(DecoderInfo& di, const char *id) {
@@ -110,10 +107,9 @@ static void processDecodedData(DecoderInfo& di, const char *id) {
 
   // Set the values
   root["type"] = "receive";
-  //root["uptime"] = millis() / 1000;
+  root["uptime"] = millis() / 1000;
   root["protocol"] = di.name;
   root["sender"] = id;
-  root["uptime"] = millis() / 1000;
   JsonArray& dataArr = root.createNestedArray("data");
   for (int i = 0; i < size; i++) {
     dataArr.add(data[i]);
@@ -141,7 +137,7 @@ static void processDecodedData(DecoderInfo& di, const char *id) {
 // Check for a new pulse and run the corresponding decoders for it
 static void runPulseDecoders (DecoderInfo* pdi, pulseFIFO& fifo, const char *id) {
   // get next pulse with and reset it - need to protect against interrupts
-  word p = 0;
+  microsUnit p = 0;
   portENTER_CRITICAL_ISR(&signalMux);
   if (fifo.count() > 0) {
     p = fifo.dequeue();
@@ -172,6 +168,9 @@ void setupRFM69() {
   digitalWrite(RFM69_RST, LOW);
   pinMode(RFM69_DIO2, INPUT);
   pinMode(RFM69_CS, OUTPUT);
+#ifdef DEBUG_LED
+  pinMode(DEBUG_LED, OUTPUT);
+#endif
 
   // Reset RFM69
 
@@ -212,11 +211,6 @@ void setupRFM69() {
 void loopRFM69(const char *id) {
    runPulseDecoders(di_433, fifo_433, id); 
 }
-
-byte readRFM69Temperature() {
-  return radio433.readTemperature();
-}
-
 
 class rfm69OOKTransmitter : public OOKTransmitter {
 public:

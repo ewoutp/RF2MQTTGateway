@@ -23,7 +23,6 @@ static void sendHeartbeat(const char *id) {
   root["type"] = "heartbeat";
   root["sender"] = id;
   root["uptime"] = millis() / 1000;
-  root["temperature"] = readRFM69Temperature();
   root["version"] = project_version;
   root["build"] = project_build;
 
