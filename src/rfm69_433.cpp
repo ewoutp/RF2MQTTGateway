@@ -9,6 +9,7 @@ RFM69 433Mhz transceiver code.
 
 #include "decoders.h"
 #include "encoders.h"
+#include "protocols.h"
 #include "simple_fifo.h"
 #include "secrets.h"
 #include "mqtt.h"
@@ -67,6 +68,13 @@ EncoderInfo ei_433[] = {
     { -1, 0, 0 }
 };
 
+KakuAProtocol kakuAProtocol;
+
+ProtocolInfo pi[] = {
+  { 14, "KAKUA", &kakuAProtocol },
+  { -1, 0, 0 }
+};
+
 static portMUX_TYPE signalMux = portMUX_INITIALIZER_UNLOCKED;
 typedef SimpleFIFO<word, 255> pulseFIFO;
 pulseFIFO fifo_433;
@@ -109,6 +117,15 @@ static void processDecodedData(DecoderInfo& di, const char *id) {
   JsonArray& dataArr = root.createNestedArray("data");
   for (int i = 0; i < size; i++) {
     dataArr.add(data[i]);
+  }
+
+  // Try to decode the protocol
+  ProtocolInfo* ppi = pi;
+  while (ppi->protocol) {
+    if (ppi->typecode == di.typecode) {
+      ppi->protocol->Decode(data, size, root);
+      break;
+    }
   }
 
   // Send MQTT message
@@ -226,4 +243,25 @@ void sendMessage(const String& protocol, const byte* msg, int msgLen) {
     }
     pei++;
   }
+}
+
+bool parseMessage(const String& protocol, const JsonObject &source, byte* msg, int &msgLen, int maxMsgLen) {
+  ProtocolInfo* ppi = pi;
+  while (ppi->protocol) {
+    if (protocol == ppi->name) {
+      if (ppi->protocol->Encode(source, msg,msgLen, maxMsgLen)) {
+        return true;
+      }
+      const JsonArray& data = source["data"];
+      if ((data.size() > 0) && (data.size() <= maxMsgLen)) {
+        for (int i = 0; i < data.size(); i++) {
+          msg[i] = data.get<byte>(i);
+        }
+        msgLen = data.size();
+        return true;
+      }
+      return false;
+    }
+  }
+  return false;
 }

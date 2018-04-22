@@ -61,15 +61,15 @@ static void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProp
   jsonBuffer.clear();
   JsonObject &root = jsonBuffer.parseObject(payload, len);
   const String& protocol = root["protocol"];
-  const JsonArray& data = root["data"];
 
-  byte dataBuf[64];
-  if (data.size() <= sizeof(dataBuf)) {
-    for (int i = 0; i < data.size(); i++) {
-      dataBuf[i] = data.get<byte>(i);
-    }
-    sendMessage(protocol, dataBuf, data.size());
-    sendMessage(protocol, dataBuf, data.size());
+  byte msgBuf[64];
+  int msgLen;
+
+  if (parseMessage(protocol, root, msgBuf, msgLen, sizeof(msgBuf))) {
+    sendMessage(protocol, msgBuf, msgLen);
+    sendMessage(protocol, msgBuf, msgLen);
+  } else {
+    Serial.println("Unsupported message");
   }
 }
 
