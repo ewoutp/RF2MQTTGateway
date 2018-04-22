@@ -97,7 +97,6 @@ static void IRAM_ATTR signal433ChangedInt() {
 //  }
 }
 
-
 static void processDecodedData(DecoderInfo& di, const char *id) {
   static StaticJsonBuffer<512> jsonBuffer;
 
@@ -111,6 +110,7 @@ static void processDecodedData(DecoderInfo& di, const char *id) {
 
   // Set the values
   root["type"] = "receive";
+  //root["uptime"] = millis() / 1000;
   root["protocol"] = di.name;
   root["sender"] = id;
   root["uptime"] = millis() / 1000;
@@ -212,6 +212,11 @@ void setupRFM69() {
 void loopRFM69(const char *id) {
    runPulseDecoders(di_433, fifo_433, id); 
 }
+
+byte readRFM69Temperature() {
+  return radio433.readTemperature();
+}
+
 
 class rfm69OOKTransmitter : public OOKTransmitter {
 public:

@@ -1,12 +1,14 @@
-/*
-This example uses FreeRTOS softwaretimers as there is no built-in Ticker library
-*/
-
 #include <ArduinoJson.h>
 #include "mqtt.h"
 #include "secrets.h"
+#include "rfm69_433.h"
+
+#define STRINGIZE(x) #x
+#define STRINGIZE_VALUE_OF(x) STRINGIZE(x)
 
 static word lastHeartbeat = 0;
+static const char * project_version = STRINGIZE_VALUE_OF(PROJECT_VERSION);
+static const char * project_build = STRINGIZE_VALUE_OF(PROJECT_BUILD);
 
 #define HEARTBEAT_INTERVAL (1000*60*2) // 2min
 
@@ -21,6 +23,9 @@ static void sendHeartbeat(const char *id) {
   root["type"] = "heartbeat";
   root["sender"] = id;
   root["uptime"] = millis() / 1000;
+  root["temperature"] = readRFM69Temperature();
+  root["version"] = project_version;
+  root["build"] = project_build;
 
   // Send MQTT message
   String payload;
