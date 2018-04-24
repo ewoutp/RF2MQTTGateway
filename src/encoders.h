@@ -62,7 +62,7 @@ private:
       tx.on();
       delayMicroseconds(T);
       tx.off();
-      delayMicroseconds(T*9);
+      delayMicroseconds(T*10.44);
   }
 
   void bit1(OOKTransmitter& tx) {
