@@ -31,9 +31,6 @@ public:
     } else {
         return false;
     }
-    // Wait a bit
-    tx.off();
-    delayMicroseconds(T*5);
     //for (int repeat = 0; repeat < 2; repeat++) {
         startPulse(tx);
         for (int i = 0; i < bitCount; i++) {
@@ -55,43 +52,45 @@ public:
   }
 
 private:
-  const int T = 275;
+  const int T1 = 275;
+  const int T4 = 1100;
+  const int T8 = 2200;
 
   void startPulse(OOKTransmitter& tx) {
       // Now begin the real start pulse
       tx.on();
-      delayMicroseconds(T);
+      delayMicroseconds(T1);
       tx.off();
-      delayMicroseconds(T*10.44);
+      delayMicroseconds(T8);
   }
 
   void bit1(OOKTransmitter& tx) {
       tx.on();
-      delayMicroseconds(T);
+      delayMicroseconds(T1);
       tx.off();
-      delayMicroseconds(T*3);
+      delayMicroseconds(T4);
       tx.on();
-      delayMicroseconds(T);
+      delayMicroseconds(T1);
       tx.off();
-      delayMicroseconds(T);
+      delayMicroseconds(T1);
   }
 
   void bit0(OOKTransmitter& tx) {
       tx.on();
-      delayMicroseconds(T);
+      delayMicroseconds(T1);
       tx.off();
-      delayMicroseconds(T);
+      delayMicroseconds(T1);
       tx.on();
-      delayMicroseconds(T);
+      delayMicroseconds(T1);
       tx.off();
-      delayMicroseconds(T*3);
+      delayMicroseconds(T4);
   }
 
   void stopPulse(OOKTransmitter& tx) {
       tx.on();
-      delayMicroseconds(T);
+      delayMicroseconds(T1);
       tx.off();
-      delayMicroseconds(T*40);
+      delayMicroseconds(T1);
   }
 };
 

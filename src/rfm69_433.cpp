@@ -18,7 +18,7 @@ RFM69 433Mhz transceiver code.
 #define DEBUG_LED   13 // RED LED
 #define MAXDATA 66
 
-#define RF69_FREQ     433.9
+#define RF69_FREQ     433.92
 
 #define RFM69_DIO2    27 // "A"
 #define RFM69_CS      32 // "D"
@@ -229,14 +229,24 @@ void sendMessage(const String& protocol, const byte* msg, int msgLen) {
   EncoderInfo* pei = ei_433;
   while (pei->encoder) {
     if (protocol == pei->name) {
+      // Turn off radio
       radio433.receiveEnd();
-      radio433.transmitBegin();
 
       Serial.print("Sending "); Serial.print(pei->name); Serial.println(" message");
       Serial.print("len: "); Serial.println(msgLen);
+
+      radio433.transmitBegin();
+      cli();
+      transmitter.off();
+      delay(5); // Give the "air" some time to get stable
+
       pei->encoder->encode(msg, msgLen, transmitter);
 
+      transmitter.off();
+      delay(5); // Give the "air" some time to get stable
+      sei();
       radio433.transmitEnd();
+
       radio433.receiveBegin();
       break;
     }

@@ -40,6 +40,10 @@ public:
         uint8_t actionBit = 0;
         if (action == "on") {
             actionBit = 1;
+        } else if (action == "off") {
+            actionBit = 0;
+        } else {
+            return false;
         }
         data[0] = (addr >> 18) & 0xFF;
         data[1] = (addr >> 10) & 0xFF;
