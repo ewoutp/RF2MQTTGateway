@@ -25,7 +25,7 @@ void setup() {
 
   setupWifi();
   Serial.println("setupWifi completed.");
-  setupMqtt();
+  setupMqtt(id);
   Serial.println("setupMqtt completed.");
 
   connectToWifi();

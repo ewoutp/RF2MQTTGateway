@@ -10,7 +10,7 @@ extern "C" {
 void connectToMqtt();
 bool isMqttConnected();
 
-void setupMqtt();
+void setupMqtt(const char *id);
 
 void stopMqttReconnect();
 

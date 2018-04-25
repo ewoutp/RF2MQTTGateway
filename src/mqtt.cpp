@@ -82,9 +82,10 @@ static void onMqttPublish(uint16_t packetId) {
   Serial.println(packetId);
 }
 
-void setupMqtt() {
+void setupMqtt(const char *id) {
   mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
 
+  mqttClient.setClientId(id);
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
   mqttClient.onSubscribe(onMqttSubscribe);
