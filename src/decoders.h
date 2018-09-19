@@ -137,6 +137,7 @@ public:
     }
     
     void resetDecoder () {
+        Serial.println("resetDecoder");
         bits = pos = flip = 0;
         state = UNKNOWN;
     }

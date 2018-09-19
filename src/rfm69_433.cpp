@@ -83,11 +83,16 @@ pulseFIFO fifo_433;
 
 static void IRAM_ATTR signal433ChangedInt() {
   static volatile microsUnit last_433 = 0; // never accessed outside ISR's
+  static volatile bool skip = false;
 
     microsUnit now = micros();
     portENTER_CRITICAL_ISR(&signalMux);
     microsUnit w = now - last_433;
-    if (w > 100) {
+    if (skip) {
+      skip = false;
+    } else if (w < 100) {
+      skip = true;
+    } else {
       last_433 = now;
       fifo_433.enqueue(w);
     }
@@ -146,7 +151,7 @@ static void runPulseDecoders (DecoderInfo* pdi, pulseFIFO& fifo, const char *id)
 
     // if we had a pulse, go through each of the decoders
     if (p != 0) { 
-      //Serial.print(p); Serial.println();
+      Serial.print(p); Serial.println();
 #ifdef DEBUG_LED
         digitalWrite(DEBUG_LED, 1);
 #endif
@@ -188,12 +193,17 @@ void setupRFM69() {
 
   radio433.initialize();
 //  radio433.setBandwidth(OOK_BW_10_4);
-//  radio433.setRSSIThreshold(-70);
-//  radio433.setFixedThreshold(30);
+//radio433.setRSSIThreshold(-70);
+//radio433.setFixedThreshold(30);
 
-  radio433.setRSSIThreshold(-50); // -50
-  radio433.setFixedThreshold(45); // 45
-  radio433.setSensitivityBoost(SENSITIVITY_BOOST_HIGH);
+// Experimenting
+radio433.setRSSIThreshold(-70); // -50
+radio433.setFixedThreshold(130); // 45
+radio433.setSensitivityBoost(SENSITIVITY_BOOST_NORMAL);
+
+  //radio433.setRSSIThreshold(-50); // -50
+  //radio433.setFixedThreshold(45); // 45
+  //radio433.setSensitivityBoost(SENSITIVITY_BOOST_HIGH);
   radio433.setFrequencyMHz(433.9);
   //radio433.setFrequencyMHz(868.35);
   //radio433.setHighPower();
