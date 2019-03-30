@@ -100,22 +100,19 @@ static void IRAM_ATTR signal433ChangedInt() {
 }
 
 static void processDecodedData(DecoderInfo& di, const char *id) {
-  static StaticJsonBuffer<512> jsonBuffer;
+  static StaticJsonDocument<1024> doc;
+  JsonObject root = doc.to<JsonObject>();
 
   // Fetch data
   byte size;
   const byte* data = di.decoder->getData(size);
-
-  // Prepare MQTT message payload
-  jsonBuffer.clear();
-  JsonObject &root = jsonBuffer.createObject();
 
   // Set the values
   root["type"] = "receive";
   root["uptime"] = millis() / 1000;
   root["protocol"] = di.name;
   root["sender"] = id;
-  JsonArray& dataArr = root.createNestedArray("data");
+  JsonArray dataArr = root.createNestedArray("data");
   for (int i = 0; i < size; i++) {
     dataArr.add(data[i]);
   }
@@ -131,7 +128,7 @@ static void processDecodedData(DecoderInfo& di, const char *id) {
 
   // Send MQTT message
   String payload;
-  root.printTo(payload);
+  serializeJson(root, payload);
   publishMqttMessage(MQTT_RECEIVE_TOPIC, 2, true, payload.c_str());
   Serial.println(payload);
 
@@ -271,10 +268,10 @@ bool parseMessage(const String& protocol, const JsonObject &source, byte* msg, i
       if (ppi->protocol->Encode(source, msg,msgLen, maxMsgLen)) {
         return true;
       }
-      const JsonArray& data = source["data"];
+      const JsonArray data = source["data"];
       if ((data.size() > 0) && (data.size() <= maxMsgLen)) {
         for (int i = 0; i < data.size(); i++) {
-          msg[i] = data.get<byte>(i);
+          msg[i] = data[i].as<byte>();
         }
         msgLen = data.size();
         return true;

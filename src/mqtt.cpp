@@ -57,22 +57,25 @@ static void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProp
   Serial.print("  topic: ");
   Serial.println(topic);
 
-  static StaticJsonBuffer<512> jsonBuffer;
-  jsonBuffer.clear();
-  JsonObject &root = jsonBuffer.parseObject(payload, len);
-  const String& protocol = root["protocol"];
-  int repeat = root["repeat"] | 2;
+  static StaticJsonDocument<512> doc;
+  doc.clear();
+  DeserializationError err = deserializeJson(doc, std::string(payload, len));
+  if (!(err)) {
+    JsonObject root = doc.as<JsonObject>();
+    const String& protocol = root["protocol"];
+    int repeat = root["repeat"] | 2;
 
-  byte msgBuf[64];
-  int msgLen;
+    byte msgBuf[64];
+    int msgLen;
 
-  if (parseMessage(protocol, root, msgBuf, msgLen, sizeof(msgBuf))) {
-    sendMessage(protocol, msgBuf, msgLen);
-    if (repeat > 1) {
+    if (parseMessage(protocol, root, msgBuf, msgLen, sizeof(msgBuf))) {
       sendMessage(protocol, msgBuf, msgLen);
+      if (repeat > 1) {
+        sendMessage(protocol, msgBuf, msgLen);
+      }
+    } else {
+      Serial.println("Unsupported message");
     }
-  } else {
-    Serial.println("Unsupported message");
   }
 }
 

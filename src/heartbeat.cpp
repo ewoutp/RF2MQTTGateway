@@ -13,11 +13,8 @@ static const char * project_build = STRINGIZE_VALUE_OF(PROJECT_BUILD);
 #define HEARTBEAT_INTERVAL (1000*60*2) // 2min
 
 static void sendHeartbeat(const char *id) {
-  static StaticJsonBuffer<512> jsonBuffer;
-
-  // Prepare MQTT message payload
-  jsonBuffer.clear();
-  JsonObject &root = jsonBuffer.createObject();
+  static StaticJsonDocument<1024> doc;
+  JsonObject root = doc.to<JsonObject>();
 
   // Set the values
   root["type"] = "heartbeat";
@@ -28,7 +25,7 @@ static void sendHeartbeat(const char *id) {
 
   // Send MQTT message
   String payload;
-  root.printTo(payload);
+  serializeJson(root, payload);
 
   publishMqttMessage(MQTT_RECEIVE_TOPIC, 0, false, payload.c_str());
 }
