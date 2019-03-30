@@ -83,11 +83,16 @@ pulseFIFO fifo_433;
 
 static void IRAM_ATTR signal433ChangedInt() {
   static volatile microsUnit last_433 = 0; // never accessed outside ISR's
+  static volatile bool skip = false;
 
     microsUnit now = micros();
     portENTER_CRITICAL_ISR(&signalMux);
     microsUnit w = now - last_433;
-    if (w > 100) {
+    if (skip) {
+      skip = false;
+    } else if (w < 100) {
+      skip = true;
+    } else {
       last_433 = now;
       fifo_433.enqueue(w);
     }
@@ -95,22 +100,19 @@ static void IRAM_ATTR signal433ChangedInt() {
 }
 
 static void processDecodedData(DecoderInfo& di, const char *id) {
-  static StaticJsonBuffer<512> jsonBuffer;
+  static StaticJsonDocument<1024> doc;
+  JsonObject root = doc.to<JsonObject>();
 
   // Fetch data
   byte size;
   const byte* data = di.decoder->getData(size);
-
-  // Prepare MQTT message payload
-  jsonBuffer.clear();
-  JsonObject &root = jsonBuffer.createObject();
 
   // Set the values
   root["type"] = "receive";
   root["uptime"] = millis() / 1000;
   root["protocol"] = di.name;
   root["sender"] = id;
-  JsonArray& dataArr = root.createNestedArray("data");
+  JsonArray dataArr = root.createNestedArray("data");
   for (int i = 0; i < size; i++) {
     dataArr.add(data[i]);
   }
@@ -126,7 +128,7 @@ static void processDecodedData(DecoderInfo& di, const char *id) {
 
   // Send MQTT message
   String payload;
-  root.printTo(payload);
+  serializeJson(root, payload);
   publishMqttMessage(MQTT_RECEIVE_TOPIC, 2, true, payload.c_str());
   Serial.println(payload);
 
@@ -146,7 +148,7 @@ static void runPulseDecoders (DecoderInfo* pdi, pulseFIFO& fifo, const char *id)
 
     // if we had a pulse, go through each of the decoders
     if (p != 0) { 
-      //Serial.print(p); Serial.println();
+      Serial.print(p); Serial.println();
 #ifdef DEBUG_LED
         digitalWrite(DEBUG_LED, 1);
 #endif
@@ -188,12 +190,17 @@ void setupRFM69() {
 
   radio433.initialize();
 //  radio433.setBandwidth(OOK_BW_10_4);
-//  radio433.setRSSIThreshold(-70);
-//  radio433.setFixedThreshold(30);
+//radio433.setRSSIThreshold(-70);
+//radio433.setFixedThreshold(30);
 
-  radio433.setRSSIThreshold(-50); // -50
-  radio433.setFixedThreshold(45); // 45
-  radio433.setSensitivityBoost(SENSITIVITY_BOOST_HIGH);
+// Experimenting
+radio433.setRSSIThreshold(-70); // -50
+radio433.setFixedThreshold(130); // 45
+radio433.setSensitivityBoost(SENSITIVITY_BOOST_NORMAL);
+
+  //radio433.setRSSIThreshold(-50); // -50
+  //radio433.setFixedThreshold(45); // 45
+  //radio433.setSensitivityBoost(SENSITIVITY_BOOST_HIGH);
   radio433.setFrequencyMHz(433.9);
   //radio433.setFrequencyMHz(868.35);
   //radio433.setHighPower();
@@ -261,10 +268,10 @@ bool parseMessage(const String& protocol, const JsonObject &source, byte* msg, i
       if (ppi->protocol->Encode(source, msg,msgLen, maxMsgLen)) {
         return true;
       }
-      const JsonArray& data = source["data"];
+      const JsonArray data = source["data"];
       if ((data.size() > 0) && (data.size() <= maxMsgLen)) {
         for (int i = 0; i < data.size(); i++) {
-          msg[i] = data.get<byte>(i);
+          msg[i] = data[i].as<byte>();
         }
         msgLen = data.size();
         return true;

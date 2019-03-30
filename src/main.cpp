@@ -10,6 +10,8 @@ This example uses FreeRTOS softwaretimers as there is no built-in Ticker library
 static word lastHeartbeat = 0;
 static char id[16];
 
+#define REBOOT_INTERVAL_MS ((unsigned long)(1000*3600*24*2)) // Reboot every 2 days
+
 void setup() {
   Serial.begin(9600);
   Serial.println();
@@ -35,4 +37,8 @@ void setup() {
 void loop() {
   loopHeartbeat(id);
   loopRFM69(id);
+
+  if (millis() > REBOOT_INTERVAL_MS) {
+    ESP.restart();
+  }
 }
